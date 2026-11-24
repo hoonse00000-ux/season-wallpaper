@@ -218,13 +218,17 @@ function makePlan(){
   const hop=(tx,ty,d)=>{push({k:'hop',x0:x,y0:y,x1:tx,y1:ty,dir:d,dur:.74});x=tx;y=ty};
   push({k:'up',x,y,dir:1,sitX:HOME[0],dur:.62});
   push({k:'stretch',x,y,dir:1,dur:1.15});
-  walk(468,1);hop(588,716,1);walk(660,1);hop(748,812,1);walk(812,1);
-  y=820;const sx=x+19;
-  push({k:'down',x,y,dir:1,sitX:sx,dur:.62});
-  push({k:'rest',x,y,dir:1,sitX:sx,dur:4.4});
-  x=sx+41;
-  push({k:'up',x,y,dir:-1,sitX:sx,dur:.62});
-  walk(790,-1);hop(662,717,-1);walk(602,-1);hop(470,650,-1);walk(HOME[0]+41,-1);
+  const go=(tx,ty,d)=>{const dist=Math.hypot(tx-x,(ty-y)*1.6);push({k:'walk',x0:x,y0:y,x1:tx,y1:ty,dir:d,dur:dist/SPEED});x=tx;y=ty};
+  const sit=(d,dur)=>{const sx=d>0?x+19:x-41;push({k:'down',x,y,dir:d,sitX:sx,dur:.62});push({k:'rest',x,y,dir:d,sitX:sx,dur});return sx};
+  const stand=(sx,d)=>{x=d>0?sx-19:sx+41;push({k:'up',x,y,dir:d,sitX:sx,dur:.62})};
+  walk(468,1);hop(588,716,1);walk(660,1);hop(748,812,1);
+  go(930,868,1);go(1130,892,1);go(1330,846,1);
+  let sx=sit(1,3.6);stand(sx,-1);
+  go(1180,812,-1);go(980,846,-1);
+  sx=sit(-1,2.4);stand(sx,1);
+  go(1060,900,1);push({k:'stretch',x,y,dir:1,dur:.9});
+  go(880,888,-1);go(790,816,-1);
+  hop(662,717,-1);walk(602,-1);hop(470,650,-1);walk(HOME[0]+41,-1);
   push({k:'down',x,y:HOME[1],dir:-1,sitX:HOME[0],dur:.62});
   return{segs,dur:t};
 }
@@ -458,11 +462,110 @@ function shakeTree(tr,ix,iy){
   }
 }
 
+
+// ---------- birds: a different kind for each season ----------
+const BIRD=[
+ {name:'swallow',n:[2,4],sp:3.4,sc:1.9,y:[60,330],swoop:42,flap:.55,every:[5,9]},
+ {name:'kingfisher',n:[1,2],sp:3.8,sc:1.9,y:[300,520],swoop:18,flap:.8,every:[6,10]},
+ {name:'goose',n:[5,7],sp:1.9,sc:2.1,y:[-70,120],swoop:4,flap:.22,every:[8,13]},
+ {name:'crane',n:[2,3],sp:1.6,sc:2.8,y:[-60,170],swoop:8,flap:.15,every:[8,13]}];
+let birds=[],birdT=2.5;
+function spawnFlock(){
+  const b=BIRD[cur],n=b.n[0]+Math.floor(Math.random()*(b.n[1]-b.n[0]+1)),dir=Math.random()<.5?1:-1;
+  const y0=b.y[0]+Math.random()*(b.y[1]-b.y[0]),x0=dir>0?-80:1752,fsw=Math.random()*7;
+  for(let i=0;i<n;i++){
+    let ox=0,oy=0;
+    if(b.name==='goose'){const r=Math.ceil(i/2),side=i%2?1:-1;ox=-r*60;oy=side*r*34}
+    else if(b.name==='crane'){ox=-i*110;oy=i*26*(i%2?1:-1)}
+    else{ox=-i*(40+Math.random()*60);oy=(Math.random()-.5)*70}
+    birds.push({k:cur,x:x0-ox*dir,y:y0+oy,dir,ph:Math.random()*7,t:0,sw:(b.name==='goose'||b.name==='crane')?fsw:Math.random()*7,
+      sp:b.sp*(.9+Math.random()*.2),sc:b.sc*(.8+Math.random()*.35)});
+  }
+}
+function wingGeom(len,f,root,back){const lift=.3+.7*f,ty=-1.5-len*lift*.72,tx=back-len*.38;return{lift,ty,tx}}
+function wingPath(c,len,f,root,back){
+  // swept wing: shoulder -> wrist -> long tip pointing back, feathered trailing edge to the body
+  const{lift,ty,tx}=wingGeom(len,f,root,back);
+  c.beginPath();c.moveTo(root+1.5,-1.2);
+  c.bezierCurveTo(root-len*.05,ty*1.08,tx+len*.45,ty-1,tx,ty+len*.05*lift);
+  const n=5;let px=tx,py=ty+len*.05*lift;
+  for(let i=1;i<=n;i++){const u=i/n,qx=tx+(back-tx)*u,qy=py+(-.8-py)*(i===n?1:u*.9)+0;
+    const yy=(ty+len*.05*lift)+(-.8-(ty+len*.05*lift))*Math.pow(u,1.1);
+    c.quadraticCurveTo((px+qx)/2,(py+yy)/2+(lift>0?1:-1)*len*.06,qx,yy);px=qx;py=yy}
+  c.closePath();
+}
+function wingEdge(c,len,f,root,back,col,w){
+  const{lift,ty,tx}=wingGeom(len,f,root,back);
+  c.save();c.strokeStyle=col;c.lineWidth=w;c.beginPath();let px=tx,py=ty+len*.05*lift;c.moveTo(px,py);
+  for(let i=1;i<=5;i++){const u=i/5,qx=tx+(back-tx)*u,yy=(ty+len*.05*lift)+(-.8-(ty+len*.05*lift))*Math.pow(u,1.1);
+    c.quadraticCurveTo((px+qx)/2,(py+yy)/2+(lift>0?1:-1)*len*.06,qx,yy);px=qx;py=yy}
+  c.stroke();c.restore();
+}
+function drawBird(c,b,t){
+  const B=BIRD[b.k],f=Math.sin(b.ph),line='rgba(70,60,75,.75)';
+  c.save();c.translate(b.x,b.y);c.scale(b.dir*b.sc,b.sc);c.lineJoin='round';c.lineCap='round';c.lineWidth=.8;c.strokeStyle=line;
+  const glide=B.name==='swallow'&&Math.sin(b.t*.9+b.sw)>.55?.45:1;
+  const fl=f*glide;
+  if(B.name==='swallow'){
+    c.fillStyle='#1d2b52';wingPath(c,15,-fl*.8,3,-6);c.fill();
+    c.beginPath();c.moveTo(-8,0);c.lineTo(-20,-3.5);c.lineTo(-13,0);c.lineTo(-20,3);c.closePath();c.fill();c.stroke();
+    c.beginPath();c.ellipse(0,0,10,3.6,0,0,7);c.fill();c.stroke();
+    c.fillStyle='#fffaf5';c.beginPath();c.ellipse(1,1.6,7,2,0,0,7);c.fill();
+    c.fillStyle='#24345f';c.beginPath();c.arc(9,-.6,3.3,0,7);c.fill();c.stroke();
+    c.fillStyle='#e0715f';c.beginPath();c.arc(11,.9,1.5,0,7);c.fill();
+    c.fillStyle='#333';c.beginPath();c.moveTo(12,-.6);c.lineTo(15,0);c.lineTo(12,.6);c.fill();
+    c.fillStyle='#33467a';wingPath(c,17,fl,3,-6);c.fill();c.stroke();
+  }else if(B.name==='kingfisher'){
+    c.fillStyle='#2b78b8';wingPath(c,12,-fl*.8,3,-5);c.fill();
+    c.fillStyle='#2e86c9';c.beginPath();c.moveTo(-7,0);c.lineTo(-13,-1.5);c.lineTo(-13,1.8);c.closePath();c.fill();c.stroke();
+    c.beginPath();c.ellipse(0,0,8.5,4.2,0,0,7);c.fill();c.stroke();
+    c.fillStyle='#f29a4a';c.beginPath();c.ellipse(1,1.9,6.2,2.2,0,0,7);c.fill();
+    c.fillStyle='#2e86c9';c.beginPath();c.arc(7.5,-1.4,4,0,7);c.fill();c.stroke();
+    c.fillStyle='#f29a4a';c.beginPath();c.ellipse(8,.4,2.2,1.2,0,0,7);c.fill();
+    c.fillStyle='#fff';c.beginPath();c.arc(8.6,-2,1.1,0,7);c.fill();c.fillStyle='#222';c.beginPath();c.arc(8.9,-2,.6,0,7);c.fill();
+    c.fillStyle='#2b2b30';c.beginPath();c.moveTo(11,-2);c.lineTo(17.5,-.6);c.lineTo(11,0);c.fill();
+    c.fillStyle='#5fb3e6';wingPath(c,13,fl,3,-5);c.fill();wingEdge(c,13,fl,3,-5,'#2a6fa8',1.6);c.stroke();
+  }else if(B.name==='goose'){
+    c.fillStyle='#857a70';wingPath(c,19,-fl*.8,5,-12);c.fill();
+    c.fillStyle='#9a8f84';c.beginPath();c.ellipse(-1,0,11,4.3,0,0,7);c.fill();c.stroke();
+    c.fillStyle='#d8d0c4';c.beginPath();c.ellipse(-1,1.9,8,2,0,0,7);c.fill();
+    c.strokeStyle='#3f3a36';c.lineWidth=2.6;c.beginPath();c.moveTo(8,-.8);c.lineTo(16,-1.6);c.stroke();
+    c.fillStyle='#3f3a36';c.beginPath();c.arc(17,-1.7,2.3,0,7);c.fill();
+    c.fillStyle='#fff';c.fillRect(15.4,-.8,2.6,.9);
+    c.fillStyle='#e49a46';c.beginPath();c.moveTo(19,-2.3);c.lineTo(22,-1.5);c.lineTo(19,-1);c.fill();
+    c.strokeStyle=line;c.lineWidth=.8;c.fillStyle='#a69a8e';wingPath(c,20,fl,5,-12);c.fill();wingEdge(c,20,fl,5,-12,'#6d6259',1.8);c.stroke();
+  }else{
+    c.fillStyle='#dfe3ec';wingPath(c,25,-fl*.8,6,-15);c.fill();
+    c.strokeStyle='#9a9aa6';c.lineWidth=1.1;c.beginPath();c.moveTo(-9,1);c.lineTo(-25,2.2);c.moveTo(-9,2);c.lineTo(-25,3.3);c.stroke();
+    c.fillStyle='#2a2a30';c.beginPath();c.moveTo(-10,-1.5);c.quadraticCurveTo(-16,-.5,-17,1.5);c.quadraticCurveTo(-13,2.5,-9,2);c.fill();
+    c.strokeStyle=line;c.lineWidth=.8;c.fillStyle='#fbfcff';c.beginPath();c.ellipse(-1,0,12,4.6,-.03,0,7);c.fill();c.stroke();
+    c.strokeStyle='#2a2a30';c.lineWidth=2.6;c.beginPath();c.moveTo(9,-1);c.quadraticCurveTo(14,-2.2,19.5,-1.8);c.stroke();
+    c.fillStyle='#2a2a30';c.beginPath();c.arc(20.5,-1.8,2.3,0,7);c.fill();
+    c.fillStyle='#fbfcff';c.beginPath();c.arc(20.2,-.9,1.3,0,7);c.fill();
+    c.fillStyle='#d9363e';c.beginPath();c.arc(21,-3.6,1.2,0,7);c.fill();
+    c.fillStyle='#b9a86a';c.beginPath();c.moveTo(22.4,-2.5);c.lineTo(27.5,-1.5);c.lineTo(22.4,-1.1);c.fill();
+    c.strokeStyle=line;c.lineWidth=.8;c.fillStyle='#ffffff';wingPath(c,27,fl,6,-15);c.fill();
+    wingEdge(c,27,fl,6,-15,'#2a2a30',2.2);c.stroke();
+  }
+  c.restore();
+}
+function drawBirds(c,dt){
+  c.setTransform(S*DPR,0,0,S*DPR,OX*DPR,OY*DPR);
+  birdT-=dt/60;if(birdT<=0&&!birds.some(b=>b.k===cur&&b.x>-60&&b.x<1732)){spawnFlock();const e=BIRD[cur].every;birdT=e[0]+Math.random()*(e[1]-e[0])}
+  for(let i=birds.length-1;i>=0;i--){const b=birds[i],B=BIRD[b.k];
+    b.t+=dt/60;b.ph+=dt*B.flap;b.x+=b.dir*b.sp*dt;
+    const vy=Math.cos(b.t*1.6+b.sw)*B.swoop*.03*dt;b.y+=vy;
+    if(b.x<-140||b.x>1812){birds.splice(i,1);continue}
+    drawBird(c,b,b.t);
+  }
+}
+
 let last=performance.now(),t0=0;
 function frame(now){
   const dt=Math.min(3,(now-last)/16.67);last=now;t0+=dt;
   water(t0,reduce?0:dt);
   drawCat(now);
+  drawBirds(ctx,reduce?0:dt);
   const c=fxx;c.setTransform(DPR,0,0,DPR,0,0);c.clearRect(0,0,W,H);
   const wind=Math.sin(t0*.004)*.6+Math.sin(t0*.0013)*.4,want=target();
   let alive=0;for(const p of parts)if(p.s===cur&&!p.burst)alive++;
@@ -482,7 +585,7 @@ const clock=document.getElementById('clock'),toastEl=document.getElementById('to
 const SNAME=['봄','여름','가을','겨울'];
 function monthSeason(){const m=new Date().getMonth()+1;return m>=3&&m<=5?0:m>=6&&m<=8?1:m>=9&&m<=11?2:3}
 function setSeason(s){
-  if(s!==cur){catPrev=cur;catFade0=performance.now()}
+  if(s!==cur){catPrev=cur;catFade0=performance.now();birdT=Math.min(birdT,1.2)}
   cur=s;imgs.forEach(im=>im.classList.toggle('on',+im.dataset.s===s));
 }
 function save(){try{localStorage.setItem('seasonwp2',JSON.stringify({auto,cur,clock:!clock.classList.contains('off')}))}catch(_){}}
