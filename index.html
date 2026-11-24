@@ -612,7 +612,7 @@ document.addEventListener('pointerup',e=>{
   if(hitCat(e.clientX,e.clientY)){catTap();return}
   const ht=hitTree(e.clientX,e.clientY);if(ht){shakeTree(...ht);return}
   const now=performance.now();
-  if(now-lastTap<320){lastTap=0;auto=true;setSeason(monthSeason());toast('자동 · '+SNAME[cur]);save()}else lastTap=now;
+  if(now-lastTap<320){lastTap=0;auto=true;setSeason(monthSeason());toast('자동 · '+SNAME[cur]+' · v3');save()}else lastTap=now;
 });
 document.addEventListener('gesturestart',e=>e.preventDefault());
 document.addEventListener('dblclick',e=>e.preventDefault());
