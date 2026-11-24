@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" id="tc" content="#abcae6">
 <meta name="apple-mobile-web-app-title" content="사계절">
 <link rel="apple-touch-icon" href="icon.png">
 <link rel="icon" href="icon.png">
@@ -63,8 +64,6 @@ let W=0,H=0,DPR=1,S=1,OX=0,OY=0,cur=1,auto=true,parts=[],streaks=[],puffs=[],gli
 function layout(){
   const pr=document.getElementById('probe').getBoundingClientRect();
   W=Math.max(innerWidth,Math.round(pr.width),document.documentElement.clientWidth);H=Math.max(innerHeight,Math.round(pr.height),document.documentElement.clientHeight);
-  // home-screen app on iPad can report a viewport shorter than the screen: use the real screen size when the app is full screen
-  {const sw=screen.width,sh=screen.height,fw=W>=H?Math.max(sw,sh):Math.min(sw,sh),fh=W>=H?Math.min(sw,sh):Math.max(sw,sh);if(Math.abs(W-fw)<=2)H=Math.max(H,fh)}
   DPR=Math.min(2,window.devicePixelRatio||1);
   for(const c of[wc,cc,fc]){c.style.width=W+'px';c.style.height=H+'px'}document.getElementById('scene').style.height=H+'px';
   S=Math.max(W/IW,H/IH2);
@@ -601,7 +600,7 @@ let rootT;
 function setSeason(s){
   if(s!==cur){catPrev=cur;catFade0=performance.now();birdT=Math.min(birdT,1.2)}
   cur=s;imgs.forEach(im=>im.classList.toggle('on',+im.dataset.s===s));
-  const bot=['#8f99a7','#8696a6','#9a8b81','#bac5db'][s];document.documentElement.style.backgroundColor=bot;document.body.style.background='transparent';
+  const bot=['#8f99a7','#8696a6','#9a8b81','#bac5db'][s];document.documentElement.style.backgroundColor=bot;document.getElementById('tc').setAttribute('content',['#aacdfe','#a0c9fa','#abcae6','#bdcde7'][s]);document.body.style.background='transparent';
   clearTimeout(rootT);rootT=setTimeout(paintRoot,1900);
 }
 function save(){try{localStorage.setItem('seasonwp2',JSON.stringify({auto,cur,clock:!clock.classList.contains('off')}))}catch(_){}}
@@ -620,7 +619,7 @@ document.addEventListener('pointerup',e=>{
   if(hitCat(e.clientX,e.clientY)){catTap();return}
   const ht=hitTree(e.clientX,e.clientY);if(ht){shakeTree(...ht);return}
   const now=performance.now();
-  if(now-lastTap<320){lastTap=0;auto=true;setSeason(monthSeason());toast('자동 · '+SNAME[cur]+' · v4');save()}else lastTap=now;
+  if(now-lastTap<320){lastTap=0;auto=true;setSeason(monthSeason());toast('자동 · '+SNAME[cur]+' · v5');save()}else lastTap=now;
 });
 document.addEventListener('gesturestart',e=>e.preventDefault());
 document.addEventListener('dblclick',e=>e.preventDefault());
