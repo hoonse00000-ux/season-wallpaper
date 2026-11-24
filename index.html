@@ -26,7 +26,7 @@ html,body{height:100%;overflow:hidden;touch-action:none;overscroll-behavior:none
 .scene img{position:absolute;left:0;top:0;transform-origin:0 0;image-rendering:auto;opacity:0;transition:opacity 1.8s ease;will-change:opacity;pointer-events:none}
 .scene img.on{opacity:1}
 canvas{position:fixed;left:0;top:0;width:100vw;height:100vh;height:100lvh;display:block;pointer-events:none}
-#probe{position:fixed;left:0;top:0;width:100vw;height:100vh;height:100lvh;visibility:hidden;pointer-events:none}
+#probe{position:fixed;left:0;top:0;width:100vw;height:100vh;height:calc(100lvh + env(safe-area-inset-bottom));visibility:hidden;pointer-events:none}
 .clock{position:fixed;left:50%;transform:translateX(-50%);top:max(4vh,env(safe-area-inset-top) + 12px);text-align:center;color:#fff;text-shadow:0 2px 16px rgba(40,70,120,.35);transition:opacity .6s;pointer-events:none}
 .clock b{display:block;font-weight:400;font-size:clamp(56px,11vmin,128px);line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
 .clock span{display:block;font-size:clamp(17px,2.6vmin,26px);margin-top:.45em}
@@ -62,7 +62,10 @@ let W=0,H=0,DPR=1,S=1,OX=0,OY=0,cur=1,auto=true,parts=[],streaks=[],puffs=[],gli
 // ---------- fit painting (cover, biased toward the cat) ----------
 function layout(){
   const pr=document.getElementById('probe').getBoundingClientRect();
-  W=Math.max(innerWidth,Math.round(pr.width),document.documentElement.clientWidth);H=Math.max(innerHeight,Math.round(pr.height),document.documentElement.clientHeight);DPR=Math.min(2,window.devicePixelRatio||1);
+  W=Math.max(innerWidth,Math.round(pr.width),document.documentElement.clientWidth);H=Math.max(innerHeight,Math.round(pr.height),document.documentElement.clientHeight);
+  // home-screen app on iPad can report a viewport shorter than the screen: use the real screen size when the app is full screen
+  {const sw=screen.width,sh=screen.height,fw=W>=H?Math.max(sw,sh):Math.min(sw,sh),fh=W>=H?Math.min(sw,sh):Math.max(sw,sh);if(Math.abs(W-fw)<=2)H=Math.max(H,fh)}
+  DPR=Math.min(2,window.devicePixelRatio||1);
   for(const c of[wc,cc,fc]){c.style.width=W+'px';c.style.height=H+'px'}document.getElementById('scene').style.height=H+'px';
   S=Math.max(W/IW,H/IH2);
   let left=(IW-W/S)/2;left=Math.max(0,Math.min(left,CAT_LEFT));
@@ -591,6 +594,7 @@ function monthSeason(){const m=new Date().getMonth()+1;return m>=3&&m<=5?0:m>=6&
 function setSeason(s){
   if(s!==cur){catPrev=cur;catFade0=performance.now();birdT=Math.min(birdT,1.2)}
   cur=s;imgs.forEach(im=>im.classList.toggle('on',+im.dataset.s===s));
+  const bot=['#8f99a7','#8696a6','#9a8b81','#bac5db'][s];document.documentElement.style.background=bot;document.body.style.background=bot;
 }
 function save(){try{localStorage.setItem('seasonwp2',JSON.stringify({auto,cur,clock:!clock.classList.contains('off')}))}catch(_){}}
 let toastT;function toast(t){toastEl.textContent=t;toastEl.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>toastEl.classList.remove('show'),1100)}
