@@ -229,6 +229,7 @@ function makePlan(mode){
   const go=(tx,ty,d)=>{const dist=Math.hypot(tx-x,(ty-y)*1.6);push({k:'walk',x0:x,y0:y,x1:tx,y1:ty,dir:d,dur:dist/SPEED});x=tx;y=ty};
   const sit=(d,dur)=>{const sx=d>0?x+19:x-41;push({k:'down',x,y,dir:d,sitX:sx,dur:.62});push({k:'rest',x,y,dir:d,sitX:sx,dur});return sx};
   const stand=(sx,d)=>{x=d>0?sx-19:sx+41;push({k:'up',x,y,dir:d,sitX:sx,dur:.62})};
+  if(mode==='short'){walk(468,1);const s0=sit(1,2.6);stand(s0,-1);walk(HOME[0]+41,-1);push({k:'down',x,y:HOME[1],dir:-1,sitX:HOME[0],dur:.62});return{segs,dur:t}}
   if(mode==='small'){
     // narrow (phone) screens: hop down the rock steps to the front of the plaza, rest, and climb back
     walk(468,1);hop(588,716,1);walk(630,1);hop(668,852,1);
@@ -327,7 +328,7 @@ function drawBody(c,col){
   c.fillStyle=col.patch;c.beginPath();c.ellipse(-42,-48,21,16,-.35,0,7);c.fill();
   c.beginPath();c.ellipse(-6,-69,17,7,.05,0,7);c.fill();
   const g=c.createLinearGradient(0,-44,0,-11);g.addColorStop(0,'rgba(150,118,150,0)');g.addColorStop(1,'rgba(150,118,150,.26)');c.fillStyle=g;c.fillRect(-70,-44,140,34);
-  c.fillStyle='rgba(255,255,255,.42)';c.beginPath();c.ellipse(6,-63,30,4.2,-.03,0,7);c.fill();
+  c.fillStyle='rgba(255,255,255,.42)';c.beginPath();c.ellipse(-16,-64,22,3.6,-.03,0,7);c.fill();
   c.restore();
   c.strokeStyle=col.line;c.lineWidth=1.4;c.lineJoin='round';c.stroke(BODY);
 }
@@ -382,6 +383,9 @@ function drawStanding(k,ps,t){
   const tilt=(ps.walk?Math.sin(ps.phase*2*Math.PI)*.025:0)+pitch*.35*d;
   const im=spr[k].h;
   c.save();c.translate(hx,hy);c.rotate(tilt);
+  // head base under the cut-out: fur fill with the lower-left jaw outline, so the neck joins cleanly
+  c.fillStyle=col.fur;c.beginPath();c.ellipse(1,-29.5,50.5,30.8,0,0,7);c.fill();
+  c.strokeStyle=col.line;c.lineWidth=1.4;c.beginPath();c.ellipse(1,-29.5,50.5,30.8,0,Math.PI*.42,Math.PI*1.08);c.stroke();
   if(im.naturalWidth)c.drawImage(im,HB[0]-HA[0],HB[1]-HA[1],HB[2]-HB[0],HB[3]-HB[1]);
   if(k===3)drawScarf(c);
   c.restore();
@@ -626,7 +630,7 @@ document.addEventListener('pointerup',e=>{
   if(hitCat(e.clientX,e.clientY)){catTap();return}
   const ht=hitTree(e.clientX,e.clientY);if(ht){shakeTree(...ht);return}
   const now=performance.now();
-  if(now-lastTap<320){lastTap=0;auto=true;setSeason(monthSeason());toast('자동 · '+SNAME[cur]+' · v8');save()}else lastTap=now;
+  if(now-lastTap<320){lastTap=0;auto=true;setSeason(monthSeason());toast('자동 · '+SNAME[cur]+' · v9');save()}else lastTap=now;
 });
 document.addEventListener('gesturestart',e=>e.preventDefault());
 document.addEventListener('dblclick',e=>e.preventDefault());
