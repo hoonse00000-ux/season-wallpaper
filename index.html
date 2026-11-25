@@ -218,16 +218,18 @@ const groundY=x=>x<520?648+Math.max(0,x-380)*.02:(x<720?717:816);
 const persp=y=>1+Math.min(1,Math.max(0,(y-650)/170))*.15;
 
 // ---- plan: stand up, stretch, walk right, hop down twice, rest on the plaza, come back ----
-function makePlan(){
+function makePlan(mode){
   const segs=[];let t=0,x=HOME[0]-19,y=HOME[1];
   const push=s=>{s.t0=t;t+=s.dur;segs.push(s)};
   const walk=(tx,d)=>{const ty=groundY(tx),dist=Math.abs(tx-x);push({k:'walk',x0:x,y0:y,x1:tx,y1:ty,dir:d,dur:dist/SPEED});x=tx;y=ty};
   const hop=(tx,ty,d)=>{push({k:'hop',x0:x,y0:y,x1:tx,y1:ty,dir:d,dur:.74});x=tx;y=ty};
   push({k:'up',x,y,dir:1,sitX:HOME[0],dur:.62});
   push({k:'stretch',x,y,dir:1,dur:1.15});
+  if(mode==='stretch'){push({k:'down',x,y,dir:1,sitX:HOME[0],dur:.62});return{segs,dur:t}}
   const go=(tx,ty,d)=>{const dist=Math.hypot(tx-x,(ty-y)*1.6);push({k:'walk',x0:x,y0:y,x1:tx,y1:ty,dir:d,dur:dist/SPEED});x=tx;y=ty};
   const sit=(d,dur)=>{const sx=d>0?x+19:x-41;push({k:'down',x,y,dir:d,sitX:sx,dur:.62});push({k:'rest',x,y,dir:d,sitX:sx,dur});return sx};
   const stand=(sx,d)=>{x=d>0?sx-19:sx+41;push({k:'up',x,y,dir:d,sitX:sx,dur:.62})};
+  if(mode==='small'){walk(468,1);const s1=sit(1,2.6);stand(s1,-1);walk(HOME[0]+41,-1);push({k:'down',x,y:HOME[1],dir:-1,sitX:HOME[0],dur:.62});return{segs,dur:t}}
   walk(468,1);hop(588,716,1);walk(660,1);hop(748,812,1);
   go(930,868,1);go(1130,892,1);go(1330,846,1);
   let sx=sit(1,3.6);stand(sx,-1);
@@ -239,7 +241,7 @@ function makePlan(){
   push({k:'down',x,y:HOME[1],dir:-1,sitX:HOME[0],dur:.62});
   return{segs,dur:t};
 }
-const PLAN=makePlan();
+let PLAN=makePlan('full');
 let planT0=-1,hearts=[],catPrev=-1,catFade0=0,catBox=[0,0,0,0];
 
 function poseAt(e,t){
@@ -418,8 +420,8 @@ function drawCat(now){
 function hitCat(sx,sy){const ix=(sx-OX)/S,iy=(sy-OY)/S;return ix>catBox[0]-6&&ix<catBox[2]+6&&iy>catBox[1]-8&&iy<catBox[3]+4}
 function catTap(){
   const t=performance.now()/1000;
-  if(planT0<0){planT0=t;hearts.push({t0:t+.3,dx:12,k:Math.random()*6});
-    const rest=PLAN.segs.find(s=>s.k==='rest');hearts.push({t0:t+rest.t0+.3,dx:10,k:1},{t0:t+rest.t0+1.1,dx:18,k:2})}
+  if(planT0<0){PLAN=makePlan(window.__catMode||(W/S<1000?'small':'full'));planT0=t;hearts.push({t0:t+.3,dx:12,k:Math.random()*6});
+    const rest=PLAN.segs.find(s=>s.k==='rest');if(rest)hearts.push({t0:t+rest.t0+.3,dx:10,k:1},{t0:t+rest.t0+1.1,dx:18,k:2})}
   else hearts.push({t0:t,dx:6+Math.random()*16,k:Math.random()*6});
 }
 
@@ -619,7 +621,7 @@ document.addEventListener('pointerup',e=>{
   if(hitCat(e.clientX,e.clientY)){catTap();return}
   const ht=hitTree(e.clientX,e.clientY);if(ht){shakeTree(...ht);return}
   const now=performance.now();
-  if(now-lastTap<320){lastTap=0;auto=true;setSeason(monthSeason());toast('자동 · '+SNAME[cur]+' · v5');save()}else lastTap=now;
+  if(now-lastTap<320){lastTap=0;auto=true;setSeason(monthSeason());toast('자동 · '+SNAME[cur]+' · v6');save()}else lastTap=now;
 });
 document.addEventListener('gesturestart',e=>e.preventDefault());
 document.addEventListener('dblclick',e=>e.preventDefault());
